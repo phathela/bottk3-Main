@@ -91,26 +91,68 @@ def execute_action(action):
     """Execute the specified action directly"""
     
     if action == 'enter_long':
-        logger.info("Action: ENTER_LONG — opening long position")
-        if trader.open_position(symbol=SYMBOL, side='Buy'):
-            indicator_signals['trade_active'] = True
-            indicator_signals['position_side'] = 'long'
-            indicator_signals['last_action'] = 'enter_long'
-            indicator_signals['last_update'] = datetime.now().isoformat()
-            return 'ENTER_LONG_SUCCESS'
+        position_side = indicator_signals['position_side']
+        if position_side == 'short':
+            logger.info("Action: ENTER_LONG — flipping from SHORT to LONG (closing short first)")
+            if not trader.close_position(symbol=SYMBOL):
+                logger.error("ENTER_LONG flip failed: could not close existing short position")
+                return 'ENTER_LONG_FLIP_CLOSE_FAILED'
+            indicator_signals['trade_active'] = False
+            indicator_signals['position_side'] = None
+            logger.info("Short position closed — opening long position")
+            if trader.open_position(symbol=SYMBOL, side='Buy'):
+                indicator_signals['trade_active'] = True
+                indicator_signals['position_side'] = 'long'
+                indicator_signals['last_action'] = 'enter_long'
+                indicator_signals['last_update'] = datetime.now().isoformat()
+                return 'ENTER_LONG_FLIP_SUCCESS'
+            else:
+                return 'ENTER_LONG_FLIP_OPEN_FAILED'
+        elif position_side == 'long':
+            logger.info("Action: ENTER_LONG — already in long position, skipping")
+            return 'ENTER_LONG_ALREADY_LONG'
         else:
-            return 'ENTER_LONG_FAILED'
+            logger.info("Action: ENTER_LONG — opening long position")
+            if trader.open_position(symbol=SYMBOL, side='Buy'):
+                indicator_signals['trade_active'] = True
+                indicator_signals['position_side'] = 'long'
+                indicator_signals['last_action'] = 'enter_long'
+                indicator_signals['last_update'] = datetime.now().isoformat()
+                return 'ENTER_LONG_SUCCESS'
+            else:
+                return 'ENTER_LONG_FAILED'
     
     elif action == 'enter_short':
-        logger.info("Action: ENTER_SHORT — opening short position")
-        if trader.open_position(symbol=SYMBOL, side='Sell'):
-            indicator_signals['trade_active'] = True
-            indicator_signals['position_side'] = 'short'
-            indicator_signals['last_action'] = 'enter_short'
-            indicator_signals['last_update'] = datetime.now().isoformat()
-            return 'ENTER_SHORT_SUCCESS'
+        position_side = indicator_signals['position_side']
+        if position_side == 'long':
+            logger.info("Action: ENTER_SHORT — flipping from LONG to SHORT (closing long first)")
+            if not trader.close_position(symbol=SYMBOL):
+                logger.error("ENTER_SHORT flip failed: could not close existing long position")
+                return 'ENTER_SHORT_FLIP_CLOSE_FAILED'
+            indicator_signals['trade_active'] = False
+            indicator_signals['position_side'] = None
+            logger.info("Long position closed — opening short position")
+            if trader.open_position(symbol=SYMBOL, side='Sell'):
+                indicator_signals['trade_active'] = True
+                indicator_signals['position_side'] = 'short'
+                indicator_signals['last_action'] = 'enter_short'
+                indicator_signals['last_update'] = datetime.now().isoformat()
+                return 'ENTER_SHORT_FLIP_SUCCESS'
+            else:
+                return 'ENTER_SHORT_FLIP_OPEN_FAILED'
+        elif position_side == 'short':
+            logger.info("Action: ENTER_SHORT — already in short position, skipping")
+            return 'ENTER_SHORT_ALREADY_SHORT'
         else:
-            return 'ENTER_SHORT_FAILED'
+            logger.info("Action: ENTER_SHORT — opening short position")
+            if trader.open_position(symbol=SYMBOL, side='Sell'):
+                indicator_signals['trade_active'] = True
+                indicator_signals['position_side'] = 'short'
+                indicator_signals['last_action'] = 'enter_short'
+                indicator_signals['last_update'] = datetime.now().isoformat()
+                return 'ENTER_SHORT_SUCCESS'
+            else:
+                return 'ENTER_SHORT_FAILED'
     
     elif action == 'enter_exit_long':
         logger.info("Action: ENTER_EXIT_LONG — closing long position")
