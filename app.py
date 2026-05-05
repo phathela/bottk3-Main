@@ -31,24 +31,28 @@ indicator_signals = {
 }
 
 def sync_position_state():
-    """Query Bybit on startup and align state with the real position."""
-    logger.info("=== Startup position sync: querying Bybit for real position state ===")
+    """Query Bybit and align internal state with the real position.
+
+    Called on startup and before every webhook action to ensure the bot's
+    state always reflects what Bybit actually holds, catching positions
+    closed externally (stop loss, manual close, liquidation).
+    """
     try:
         result = trader.sync_position_from_exchange(symbol=SYMBOL)
         indicator_signals['trade_active'] = result['active']
         indicator_signals['position_side'] = result['side']
         if result['active']:
             logger.info(
-                f"Startup sync complete — POSITION FOUND: "
+                f"Position sync complete — POSITION FOUND: "
                 f"trade_active=True, position_side='{result['side']}'"
             )
         else:
             logger.info(
-                "Startup sync complete — NO OPEN POSITION: "
+                "Position sync complete — NO OPEN POSITION: "
                 "trade_active=False, position_side=None"
             )
     except Exception as e:
-        logger.error(f"Startup position sync failed — bot will start with default state: {str(e)}")
+        logger.error(f"Position sync failed — proceeding with current state: {str(e)}")
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -89,7 +93,16 @@ def webhook_3commas_a():
 
 def execute_action(action):
     """Execute the specified action directly"""
-    
+
+    # Sync with Bybit before every action to catch positions closed externally
+    # (e.g. stop loss, manual close, liquidation) and prevent error 110017.
+    logger.info(f"Pre-action sync: querying Bybit for real position state before '{action}'")
+    sync_position_state()
+    logger.info(
+        f"Pre-action sync complete — trade_active={indicator_signals['trade_active']}, "
+        f"position_side='{indicator_signals['position_side']}'"
+    )
+
     if action == 'enter_long':
         position_side = indicator_signals['position_side']
         if position_side == 'short':
