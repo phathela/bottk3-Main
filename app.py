@@ -78,10 +78,11 @@ def webhook_3commas_a():
         action_map = {
             'enter_long': 'enter_long',
             'enter_short': 'enter_short',
-            'exit_long': 'enter_exit_long',
-            'exit_short': 'enter_exit_short',
-            'close_long': 'enter_exit_long',
-            'close_short': 'enter_exit_short',
+            # Exit/close actions now flip to the opposite position instead of just closing
+            'exit_long': 'enter_short',
+            'exit_short': 'enter_long',
+            'close_long': 'enter_short',
+            'close_short': 'enter_long',
         }
         normalized_action = action_map.get(action)
 
