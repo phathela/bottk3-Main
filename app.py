@@ -66,12 +66,6 @@ def webhook_3commas_a():
             logger.warning("Failed to parse JSON body — missing or invalid Content-Type")
             return jsonify({'error': 'Invalid or missing JSON body'}), 400
 
-        # Authenticate via header or body key
-        auth_key = request.headers.get('X-Webhook-Key') or request.headers.get('Authorization', '').replace('Bearer ', '') or data.get('key', '')
-        if auth_key != WEBHOOK_KEY:
-            logger.warning(f"Unauthorized webhook attempt with key: {auth_key}")
-            return jsonify({'error': 'Unauthorized'}), 401
-
         action = data.get('action', '').lower()
 
         # Normalize TradingView/3Commas action names
