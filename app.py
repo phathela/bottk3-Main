@@ -100,7 +100,9 @@ def webhook_3commas_a():
 
 def execute_action(action):
     """Execute the specified action directly"""
-    
+    # Sync with Bybit before acting so external closes are detected
+    sync_position_state()
+
     if action == 'enter_long':
         position_side = indicator_signals['position_side']
         if position_side == 'short':
